@@ -7,15 +7,16 @@ from intelligence.ollama_impl import (
     OllamaImageClient,
     OllamaTextClient,
 )
-from storage import ImageType, StorageManager
+from storage import ImageType, StorageManager, VectorManager
 
 
 def process_entry_metadata(entry_id: UUID) -> None:
     """
     Background job: enrich entry with image description(s), mood, and embedding vector;
-    updates `mood` + `vector_status` in SQLite and writes embedding JSON under vector_store/.
+    updates `mood` + `vector_status` in SQLite, and upserts into ChromaDB via VectorManager.
     """
     sm = StorageManager()
+    vm = VectorManager()
     text_llm = OllamaTextClient()
     image_llm = OllamaImageClient()
     embed_client = OllamaEmbeddingClient()
@@ -46,7 +47,15 @@ def process_entry_metadata(entry_id: UUID) -> None:
             image_description="\n".join(image_descriptions) if image_descriptions else None,
         )
         vector = embed_client.embed(combined)
-        sm.save_embedding_vector(entry_id, vector)
+        vm.upsert_entry(
+            str(entry_id),
+            vector,
+            metadata={
+                "journal_date": entry.journal_date.isoformat(),
+                "tags": "",
+            },
+            document_text=combined,
+        )
         sm.update_entry_metadata(entry_id, mood=mood, vector_status="ready")
     except Exception:
         sm.update_entry_metadata(entry_id, vector_status="failed")

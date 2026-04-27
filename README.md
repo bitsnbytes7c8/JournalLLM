@@ -8,13 +8,13 @@ On startup the app ensures:
 
 - **Storage root**: `~/.local_journal/`
 - **Attachments**: `~/.local_journal/attachments/`
-- **Vector store**: `~/.local_journal/vector_store/` (embedding JSON files per entry when enrichment runs)
+- **Vector store**: `~/.local_journal/vector_store/` ([ChromaDB](https://www.trychroma.com/) persistent DB + **`journal_entries`** collection; created on demand)
 - **SQLite DB**: `~/.local_journal/journal.db`
 
 ### Requirements
 
 - Python 3.9+
-- Dependencies: see `requirements.txt` (FastAPI, SQLModel, Uvicorn, **ollama** Python client)
+- Dependencies: see `requirements.txt` (FastAPI, SQLModel, Uvicorn, **ollama**, **chromadb**)
 - **Optional — AI enrichment**: [Ollama](https://ollama.com) running locally with these models pulled:
 
   ```bash
@@ -56,7 +56,7 @@ uvicorn server.app:app --reload
 
 - **Create** when `entryId` is `new` or the null UUID `00000000-0000-0000-0000-000000000000`.
 - **Update** otherwise (UUID string). Returns `{"entryId": "<uuid>"}`.
-- After a successful create or update, a **background task** runs (`process_entry_metadata`): loads the entry, optionally describes images via **moondream**, infers a short **mood** via **llama3.2**, writes an embedding with **nomic-embed-text** to `vector_store/<entryId>.json`, and updates **`mood`** and **`vector_status`** (`ready` or `failed`) in SQLite.
+- After a successful create or update, a **background task** runs (`process_entry_metadata`): loads the entry, optionally describes images via **moondream**, infers a short **mood** via **llama3.2**, embeds the combined text with **nomic-embed-text**, **upserts** into Chroma (`VectorManager` → collection **`journal_entries`**, ID = entry UUID, metadata includes **`journal_date`** and **`tags`** (empty for now)), and updates **`mood`** and **`vector_status`** (`ready` or `failed`) in SQLite.
 
 Body (`EntryCreate`):
 
@@ -77,7 +77,8 @@ Body (`EntryCreate`):
 - `main.py` — minimal entrypoint (`uvicorn.run("server.app:app", ...)`)
 - `server/app.py` — FastAPI app, routes, CORS, background tasks
 - `server/schemas.py` — Pydantic request/response models
-- `storage/storage_manager.py` — `StorageManager` (SQLite, files, metadata, embeddings on disk)
+- `storage/storage_manager.py` — `StorageManager` (SQLite, files, metadata)
+- `storage/vector_manager.py` — `VectorManager` (ChromaDB persistent client, semantic upsert/query/delete)
 - `storage/models.py` — SQLModel tables
 - `intelligence/interfaces.py` — ABCs for text / image / embedding clients
 - `intelligence/ollama_impl.py` — Ollama implementations (`llama3.2`, `moondream`, `nomic-embed-text`)

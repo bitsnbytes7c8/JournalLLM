@@ -2,3 +2,4 @@ fastapi
 sqlmodel
 uvicorn[standard]
 ollama
+chromadb
