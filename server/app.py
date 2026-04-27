@@ -8,9 +8,8 @@ from uuid import UUID
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from .models import ImageType
-from .schemas import EntryCreate, EntryDetail, EntrySummary
-from .storage import StorageManager
+from server.schemas import EntryCreate, EntryDetail, EntrySummary
+from storage import ImageType, StorageManager
 
 
 storage = StorageManager()
@@ -31,6 +30,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 def get_storage() -> StorageManager:
     return storage

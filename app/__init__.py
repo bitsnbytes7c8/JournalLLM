@@ -1,2 +1,0 @@
-"""Local Journal backend package."""
-

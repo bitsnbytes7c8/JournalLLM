@@ -22,10 +22,16 @@ On startup the app ensures:
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload
+python3 main.py
 ```
 
 - **Interactive API docs**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+
+Alternative:
+
+```bash
+uvicorn server.app:app --reload
+```
 
 ### API overview
 
@@ -56,7 +62,8 @@ Body (`EntryCreate`):
 
 ### Project layout
 
-- `app/main.py` — FastAPI app, routes, CORS, `StorageManager` dependency
-- `app/storage.py` — `StorageManager` (SQLite, files, path resolution)
-- `app/models.py` — SQLModel tables
-- `app/schemas.py` — Pydantic request/response models
+- `main.py` — minimal entrypoint (`uvicorn.run("server.app:app", ...)`)
+- `server/app.py` — FastAPI app, routes, CORS, `StorageManager` dependency
+- `server/schemas.py` — Pydantic request/response models
+- `storage/storage_manager.py` — `StorageManager` (SQLite, files, path resolution)
+- `storage/models.py` — SQLModel tables

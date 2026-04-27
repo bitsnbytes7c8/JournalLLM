@@ -21,6 +21,15 @@ class JournalPaths:
 
 
 class StorageManager:
+    """
+    Local-first storage for the journal.
+
+    Uses:
+    - ~/.local_journal/journal.db
+    - ~/.local_journal/attachments/
+    - ~/.local_journal/vector_store/
+    """
+
     def __init__(self, base_dir: Optional[Path] = None):
         base = base_dir if base_dir is not None else (Path.home() / ".local_journal")
         self.paths = JournalPaths(
@@ -144,9 +153,6 @@ class StorageManager:
         web_url_path: Optional[str] = None,
         image_description: Optional[str] = None,
     ) -> Entry:
-        """
-        Placeholder update method: updates provided fields and refreshes last_updated_at.
-        """
         self.ensure_storage_ready()
         with Session(self.engine) as session:
             entry = session.get(Entry, entry_id)
@@ -193,7 +199,6 @@ class StorageManager:
 
     def get_entries_by_date(self, target_date: date) -> List[Entry]:
         self.ensure_storage_ready()
-
         with Session(self.engine) as session:
             stmt = (
                 select(Entry)
