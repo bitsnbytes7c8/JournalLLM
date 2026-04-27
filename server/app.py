@@ -5,9 +5,10 @@ from datetime import date
 from typing import List
 from uuid import UUID
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
+from intelligence.tasks import process_entry_metadata
 from server.schemas import EntryCreate, EntryDetail, EntrySummary
 from storage import ImageType, StorageManager
 
@@ -43,6 +44,7 @@ NULL_UUID = UUID("00000000-0000-0000-0000-000000000000")
 def put_entry(
     entryId: str,
     payload: EntryCreate,
+    background_tasks: BackgroundTasks,
     sm: StorageManager = Depends(get_storage),
 ):
     is_new = entryId == "new"
@@ -66,6 +68,7 @@ def put_entry(
             local_image_path=local_path,
             web_url_path=web_url_path,
         )
+        background_tasks.add_task(process_entry_metadata, entry.id)
         return {"entryId": str(entry.id)}
 
     try:
@@ -79,6 +82,7 @@ def put_entry(
     except KeyError:
         raise HTTPException(status_code=404, detail="Entry not found")
 
+    background_tasks.add_task(process_entry_metadata, entry.id)
     return {"entryId": str(entry.id)}
 
 

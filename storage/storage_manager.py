@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import shutil
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
@@ -206,4 +207,43 @@ class StorageManager:
                 .order_by(Entry.created_at.desc())
             )
             return list(session.exec(stmt).all())
+
+    def update_entry_metadata(
+        self,
+        entry_id: UUID,
+        *,
+        mood: Optional[str] = None,
+        vector_status: Optional[str] = None,
+    ) -> Entry:
+        self.ensure_storage_ready()
+        with Session(self.engine) as session:
+            entry = session.get(Entry, entry_id)
+            if entry is None:
+                raise KeyError(f"Entry not found: {entry_id}")
+            if mood is not None:
+                entry.mood = mood
+            if vector_status is not None:
+                entry.vector_status = vector_status
+            entry.last_updated_at = datetime.now(timezone.utc)
+            session.add(entry)
+            session.commit()
+            session.refresh(entry)
+            return entry
+
+    def update_image_description(self, image_id: UUID, *, description: str) -> None:
+        self.ensure_storage_ready()
+        with Session(self.engine) as session:
+            img = session.get(Image, image_id)
+            if img is None:
+                return
+            img.description = description
+            session.add(img)
+            session.commit()
+
+    def save_embedding_vector(self, entry_id: UUID, vector: List[float]) -> Path:
+        self.ensure_storage_ready()
+        out = self.paths.vector_store_dir / f"{entry_id}.json"
+        payload = {"entry_id": str(entry_id), "embedding": vector, "dims": len(vector)}
+        out.write_text(json.dumps(payload), encoding="utf-8")
+        return out
 

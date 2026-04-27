@@ -1,6 +1,6 @@
 ## Local Journal backend (FastAPI + SQLModel)
 
-Local-first journal API: SQLite under your home directory, optional image attachments, and CORS enabled for a separate frontend.
+Local-first journal API: SQLite under your home directory, optional image attachments, CORS for a separate frontend, and optional **Ollama**-backed enrichment (mood + embeddings).
 
 ### What this sets up
 
@@ -8,13 +8,24 @@ On startup the app ensures:
 
 - **Storage root**: `~/.local_journal/`
 - **Attachments**: `~/.local_journal/attachments/`
-- **Vector store**: `~/.local_journal/vector_store/`
+- **Vector store**: `~/.local_journal/vector_store/` (embedding JSON files per entry when enrichment runs)
 - **SQLite DB**: `~/.local_journal/journal.db`
 
 ### Requirements
 
 - Python 3.9+
-- Dependencies: see `requirements.txt` (FastAPI, SQLModel, Uvicorn)
+- Dependencies: see `requirements.txt` (FastAPI, SQLModel, Uvicorn, **ollama** Python client)
+- **Optional — AI enrichment**: [Ollama](https://ollama.com) running locally with these models pulled:
+
+  ```bash
+  ollama pull llama3.2
+  ollama pull moondream
+  ollama pull nomic-embed-text
+  ```
+
+  If Ollama is missing or a model errors, background jobs set `vector_status` to `failed` on that entry.
+
+- **Environment**: `OLLAMA_HOST` is optional (e.g. `http://127.0.0.1:11434`) — passed through to the Ollama client when set.
 
 ### Run
 
@@ -45,6 +56,7 @@ uvicorn server.app:app --reload
 
 - **Create** when `entryId` is `new` or the null UUID `00000000-0000-0000-0000-000000000000`.
 - **Update** otherwise (UUID string). Returns `{"entryId": "<uuid>"}`.
+- After a successful create or update, a **background task** runs (`process_entry_metadata`): loads the entry, optionally describes images via **moondream**, infers a short **mood** via **llama3.2**, writes an embedding with **nomic-embed-text** to `vector_store/<entryId>.json`, and updates **`mood`** and **`vector_status`** (`ready` or `failed`) in SQLite.
 
 Body (`EntryCreate`):
 
@@ -63,7 +75,10 @@ Body (`EntryCreate`):
 ### Project layout
 
 - `main.py` — minimal entrypoint (`uvicorn.run("server.app:app", ...)`)
-- `server/app.py` — FastAPI app, routes, CORS, `StorageManager` dependency
+- `server/app.py` — FastAPI app, routes, CORS, background tasks
 - `server/schemas.py` — Pydantic request/response models
-- `storage/storage_manager.py` — `StorageManager` (SQLite, files, path resolution)
+- `storage/storage_manager.py` — `StorageManager` (SQLite, files, metadata, embeddings on disk)
 - `storage/models.py` — SQLModel tables
+- `intelligence/interfaces.py` — ABCs for text / image / embedding clients
+- `intelligence/ollama_impl.py` — Ollama implementations (`llama3.2`, `moondream`, `nomic-embed-text`)
+- `intelligence/tasks.py` — `process_entry_metadata` background pipeline
