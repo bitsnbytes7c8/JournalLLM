@@ -208,6 +208,13 @@ class StorageManager:
             )
             return list(session.exec(stmt).all())
 
+    def list_all_entries(self) -> List[Entry]:
+        """All journal entries, oldest first (stable order for batch jobs)."""
+        self.ensure_storage_ready()
+        with Session(self.engine) as session:
+            stmt = select(Entry).order_by(Entry.created_at.asc())
+            return list(session.exec(stmt).all())
+
     def update_entry_metadata(
         self,
         entry_id: UUID,

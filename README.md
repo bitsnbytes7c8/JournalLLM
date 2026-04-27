@@ -56,7 +56,18 @@ uvicorn server.app:app --reload
 
 - **Create** when `entryId` is `new` or the null UUID `00000000-0000-0000-0000-000000000000`.
 - **Update** otherwise (UUID string). Returns `{"entryId": "<uuid>"}`.
-- After a successful create or update, a **background task** runs (`process_entry_metadata`): loads the entry, optionally describes images via **moondream**, infers a short **mood** via **llama3.2**, embeds the combined text with **nomic-embed-text**, **upserts** into Chroma (`VectorManager` → collection **`journal_entries`**, ID = entry UUID, metadata includes **`journal_date`** and **`tags`** (empty for now)), and updates **`mood`** and **`vector_status`** (`ready` or `failed`) in SQLite.
+- After a successful create or update, a **background task** runs (`process_entry_metadata` → shared **`intelligence.entry_pipeline.enrich_and_index_entry`**): reloads the entry, re-describes images via **moondream**, infers **mood** via **llama3.2**, embeds with **nomic-embed-text**, **upserts** into Chroma (`VectorManager` → **`journal_entries`**, ID = entry UUID, metadata **`journal_date`** + **`tags`**), and sets **`vector_status`** to **`ready`** or **`failed`** in SQLite.
+
+### Maintenance: full re-index
+
+From the repo root (same Ollama/Chroma setup as the server):
+
+```bash
+python3 scripts/rebuild_index.py          # prompts before wiping Chroma
+python3 scripts/rebuild_index.py --force  # no prompt; deletes collection then rebuilds
+```
+
+This **deletes** the Chroma **`journal_entries`** collection, then walks **all SQLite entries** in creation order. For each entry it fills **missing** image descriptions and **missing** mood when possible, always recomputes the embedding and upserts Chroma, and sets **`vector_status`** to **`indexed`** (or **`failed`** on error). Progress is printed (`Processing entry i of n...`).
 
 Body (`EntryCreate`):
 
@@ -82,4 +93,6 @@ Body (`EntryCreate`):
 - `storage/models.py` — SQLModel tables
 - `intelligence/interfaces.py` — ABCs for text / image / embedding clients
 - `intelligence/ollama_impl.py` — Ollama implementations (`llama3.2`, `moondream`, `nomic-embed-text`)
-- `intelligence/tasks.py` — `process_entry_metadata` background pipeline
+- `intelligence/entry_pipeline.py` — shared **`enrich_and_index_entry`** (API background job + rebuild script)
+- `intelligence/tasks.py` — `process_entry_metadata` (wraps the pipeline for FastAPI `BackgroundTasks`)
+- `scripts/rebuild_index.py` — wipe Chroma collection and batch re-index from SQLite

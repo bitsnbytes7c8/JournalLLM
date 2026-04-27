@@ -28,6 +28,17 @@ class VectorManager:
             metadata={"description": "Journal entry embeddings"},
         )
 
+    def wipe_journal_collection(self) -> None:
+        """Delete and recreate the ``journal_entries`` collection (full re-index)."""
+        try:
+            self._client.delete_collection(self.COLLECTION_NAME)
+        except Exception:
+            pass
+        self._collection = self._client.get_or_create_collection(
+            name=self.COLLECTION_NAME,
+            metadata={"description": "Journal entry embeddings"},
+        )
+
     @property
     def store_path(self) -> Path:
         return self._path
