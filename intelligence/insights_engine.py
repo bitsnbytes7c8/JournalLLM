@@ -120,7 +120,7 @@ class InsightsEngine:
 
 ### QUESTION: {current_question}
 
-Answer helpfully using CONTEXT when it is relevant; if CONTEXT is empty or not useful, say so briefly."""
+Answer helpfully using CONTEXT when it is relevant; if CONTEXT is empty or not useful, say so briefly but try to answer the question based on the HISTORY."""
         resp = self._client.chat(
             model=self._chat_model,
             messages=[{"role": "user", "content": prompt}],
