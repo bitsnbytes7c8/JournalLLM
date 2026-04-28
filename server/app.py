@@ -8,12 +8,16 @@ from uuid import UUID
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
+from intelligence.insights_engine import InsightsEngine
 from intelligence.tasks import process_entry_metadata
-from server.schemas import EntryCreate, EntryDetail, EntrySummary
-from storage import ImageType, StorageManager
+from server.schemas import ChatRequest, ChatResponse, EntryCreate, EntryDetail, EntrySummary
+from storage import ImageType, InMemorySessionManager, StorageManager, VectorManager
 
 
 storage = StorageManager()
+vector_store = VectorManager()
+sessions = InMemorySessionManager()
+insights = InsightsEngine()
 
 
 @asynccontextmanager
@@ -35,6 +39,18 @@ app.add_middleware(
 
 def get_storage() -> StorageManager:
     return storage
+
+
+def get_vector_store() -> VectorManager:
+    return vector_store
+
+
+def get_sessions() -> InMemorySessionManager:
+    return sessions
+
+
+def get_insights() -> InsightsEngine:
+    return insights
 
 
 NULL_UUID = UUID("00000000-0000-0000-0000-000000000000")
@@ -132,4 +148,25 @@ def get_entry_by_id(
         journal_date=entry.journal_date,
         attachments=attachments,
     )
+
+
+@app.post("/chat/{session_id}", response_model=ChatResponse)
+def chat(
+    session_id: str,
+    payload: ChatRequest,
+    sm: StorageManager = Depends(get_storage),
+    vm: VectorManager = Depends(get_vector_store),
+    se: InMemorySessionManager = Depends(get_sessions),
+    eng: InsightsEngine = Depends(get_insights),
+):
+    past = se.get_history(session_id)
+    reply = eng.answer(
+        current_question=payload.message,
+        history=past,
+        sm=sm,
+        vm=vm,
+    )
+    se.add_message(session_id, "user", payload.message)
+    se.add_message(session_id, "assistant", reply)
+    return ChatResponse(reply=reply)
 

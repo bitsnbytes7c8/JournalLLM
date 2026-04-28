@@ -37,3 +37,11 @@ class EntryDetail(BaseModel):
     journal_date: date
     attachments: List[AttachmentOut]
 
+
+class ChatRequest(BaseModel):
+    message: str
+
+
+class ChatResponse(BaseModel):
+    reply: str
+

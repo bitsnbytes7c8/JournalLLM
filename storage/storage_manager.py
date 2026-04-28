@@ -198,6 +198,17 @@ class StorageManager:
                 raise KeyError(f"Entry not found: {entry_id}")
             return entry
 
+    def get_entries_by_ids_in_order(self, entry_ids: List[UUID]) -> List[Entry]:
+        """Fetch entries by ID, preserving the order of ``entry_ids`` (skips missing)."""
+        if not entry_ids:
+            return []
+        self.ensure_storage_ready()
+        with Session(self.engine) as session:
+            stmt = select(Entry).where(Entry.id.in_(entry_ids))
+            rows = list(session.exec(stmt).all())
+        by_id = {e.id: e for e in rows}
+        return [by_id[i] for i in entry_ids if i in by_id]
+
     def get_entries_by_date(self, target_date: date) -> List[Entry]:
         self.ensure_storage_ready()
         with Session(self.engine) as session:

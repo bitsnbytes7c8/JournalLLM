@@ -69,9 +69,12 @@ class VectorManager:
         query_vector: List[float],
         n_results: int = 5,
         filter_metadata: Optional[dict] = None,
+        max_distance: Optional[float] = None,
     ) -> List[Dict[str, Any]]:
         """
         Return the most relevant entry IDs with Chroma distances (lower is closer for L2).
+        If ``max_distance`` is set, drop hits whose distance is strictly greater than that
+        (e.g. ``0.5`` for a similarity-style cutoff, depending on Chroma's metric).
         """
         kwargs: Dict[str, Any] = {
             "query_embeddings": [query_vector],
@@ -89,5 +92,7 @@ class VectorManager:
         out: List[Dict[str, Any]] = []
         for i, eid in enumerate(row_ids):
             dist = row_dists[i] if i < len(row_dists) else None
+            if max_distance is not None and dist is not None and dist > max_distance:
+                continue
             out.append({"id": eid, "distance": dist})
         return out
