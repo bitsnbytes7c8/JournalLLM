@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 from datetime import date
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 
-from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
 
 from intelligence.insights_engine import InsightsEngine
@@ -102,6 +102,25 @@ def put_entry(
     return {"entryId": str(entry.id)}
 
 
+@app.post("/entry", status_code=status.HTTP_201_CREATED)
+def post_entry(
+    payload: EntryCreate,
+    background_tasks: BackgroundTasks,
+    sm: StorageManager = Depends(get_storage),
+):
+    attachment = payload.attachment
+    local_path = attachment.localPath if attachment else None
+    web_url_path = attachment.webUrlPath if attachment else None
+    entry = sm.save_entry(
+        title=payload.title,
+        content=payload.content,
+        local_image_path=local_path,
+        web_url_path=web_url_path,
+    )
+    background_tasks.add_task(process_entry_metadata, entry.id)
+    return {"id": str(entry.id)}
+
+
 @app.get("/entry/date/{date_str}", response_model=List[EntrySummary])
 def get_entries_by_date(
     date_str: str,
@@ -114,6 +133,22 @@ def get_entries_by_date(
 
     entries = sm.get_entries_by_date(target)
     return [EntrySummary(entryId=e.id, title=e.title) for e in entries]
+
+
+@app.get("/entries/latest")
+def get_entries_latest(
+    limit: int = Query(10, ge=1, le=100),
+    sm: StorageManager = Depends(get_storage),
+):
+    rows = sm.get_latest_entries(limit=limit)
+    return [
+        {
+            "id": str(r["id"]),
+            "title": r["title"],
+            "journal_date": r["journal_date"].isoformat(),
+        }
+        for r in rows
+    ]
 
 
 @app.get("/entry/id/{entryId}", response_model=EntryDetail)

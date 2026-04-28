@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}New Entry — Local Journal{% endblock %}
+
+{% block content %}
+  <h1 class="text-2xl font-semibold mb-6">New entry</h1>
+
+  <div class="rounded-lg border border-slate-800 bg-slate-900/30 p-6">
+    <form id="entryForm" class="space-y-4">
+      <div>
+        <label class="block text-sm text-slate-300 mb-2">Title</label>
+        <input
+          id="title"
+          name="title"
+          type="text"
+          required
+          class="w-full rounded-md border border-slate-800 bg-slate-950 px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-400"
+          placeholder="Today..."
+        />
+      </div>
+
+      <div>
+        <label class="block text-sm text-slate-300 mb-2">Content</label>
+        <textarea
+          id="content"
+          name="content"
+          required
+          rows="10"
+          class="w-full rounded-md border border-slate-800 bg-slate-950 px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-400"
+          placeholder="Write your thoughts..."
+        ></textarea>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button
+          type="submit"
+          class="rounded-md bg-slate-100 text-slate-900 px-4 py-2 text-sm font-medium hover:bg-white disabled:opacity-50"
+        >
+          Save
+        </button>
+        <div id="status" class="text-sm text-slate-400"></div>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    const form = document.getElementById('entryForm');
+    const statusEl = document.getElementById('status');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      statusEl.textContent = 'Saving...';
+      const title = document.getElementById('title').value;
+      const content = document.getElementById('content').value;
+      try {
+        const resp = await fetch('/entry', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, content })
+        });
+        if (!resp.ok) {
+          const t = await resp.text();
+          statusEl.textContent = 'Error: ' + t;
+          return;
+        }
+        const data = await resp.json();
+        window.location.href = '/entry/' + data.id;
+      } catch (err) {
+        statusEl.textContent = 'Error: ' + String(err);
+      }
+    });
+  </script>
+{% endblock %}
+

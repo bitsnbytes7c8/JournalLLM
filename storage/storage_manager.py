@@ -5,7 +5,7 @@ import shutil
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from uuid import UUID, uuid4
 
 from sqlmodel import Session, SQLModel, create_engine, select
@@ -225,6 +225,27 @@ class StorageManager:
         with Session(self.engine) as session:
             stmt = select(Entry).order_by(Entry.created_at.asc())
             return list(session.exec(stmt).all())
+
+    def get_latest_entries(self, limit: int = 10) -> List[Dict[str, Any]]:
+        """
+        Latest entries as lightweight rows for UI lists.
+        Returns dicts: {id, title, journal_date}
+        """
+        self.ensure_storage_ready()
+        lim = max(1, min(int(limit), 100))
+        with Session(self.engine) as session:
+            stmt = (
+                select(Entry.id, Entry.title, Entry.journal_date)
+                .order_by(Entry.journal_date.desc(), Entry.created_at.desc())
+                .limit(lim)
+            )
+            rows = list(session.exec(stmt).all())
+        out: List[Dict[str, Any]] = []
+        for r in rows:
+            # SQLModel returns Row/tuple-like results for column selects
+            entry_id, title, journal_date = r
+            out.append({"id": entry_id, "title": title, "journal_date": journal_date})
+        return out
 
     def update_entry_metadata(
         self,

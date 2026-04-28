@@ -14,7 +14,7 @@ On startup the app ensures:
 ### Requirements
 
 - Python 3.9+
-- Dependencies: see `requirements.txt` (FastAPI, SQLModel, Uvicorn, **ollama**, **chromadb**)
+- Dependencies: see `requirements.txt` (FastAPI, SQLModel, Uvicorn, **jinja2**, **ollama**, **chromadb**)
 - **Optional — AI enrichment**: [Ollama](https://ollama.com) running locally with these models pulled:
 
   ```bash
@@ -37,6 +37,7 @@ python3 main.py
 ```
 
 - **Interactive API docs**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+- **Home UI**: [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
 
 Alternative:
 
@@ -49,8 +50,10 @@ uvicorn server.app:app --reload
 | Method | Path | Description |
 |--------|------|-------------|
 | `PUT` | `/entry/{entryId}` | Create or update an entry; see below |
+| `POST` | `/entry` | Create a new entry (used by the UI create form) |
 | `GET` | `/entry/date/{YYYY-MM-DD}` | List entries for that journal date (summaries) |
 | `GET` | `/entry/id/{entryId}` | Full entry plus attachments |
+| `GET` | `/entries/latest?limit=N` | Latest entries (id/title/journal_date), ordered by date desc |
 | `POST` | `/chat/{session_id}` | RAG chat: session history + Chroma retrieval + Llama 3.2 answer |
 
 **PUT `/entry/{entryId}`**
@@ -63,6 +66,10 @@ Body (`EntryCreate`):
 
 - `title`, `content` (required)
 - `attachment` (optional): `{ "localPath": "...", "webUrlPath": "..." }` — local files are copied into `attachments/` and stored as relative paths; URLs are stored for cloud images.
+
+**POST `/entry`**
+
+- Creates a new entry and returns `{"id": "<uuid>"}` (HTTP 201). This is used by the Jinja2 UI `/create` page.
 
 **GET `/entry/date/{date}`**
 
@@ -109,3 +116,6 @@ This **deletes** the Chroma **`journal_entries`** collection, then walks **all S
 - `intelligence/entry_pipeline.py` — shared **`enrich_and_index_entry`** (API background job + rebuild script)
 - `intelligence/tasks.py` — `process_entry_metadata` (wraps the pipeline for FastAPI `BackgroundTasks`)
 - `scripts/rebuild_index.py` — wipe Chroma collection and batch re-index from SQLite
+- `ui/router.py` — Jinja2 UI routes (`/`, `/create`, `/entry/{id}`)
+- `ui/templates/` — Jinja2 templates (`base.html`, `index.html`, `view.html`, `create.html`)
+- `ui/static/` — static assets (mounted at `/static`)
