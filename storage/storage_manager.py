@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import shutil
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
@@ -11,6 +12,8 @@ from uuid import UUID, uuid4
 from sqlmodel import Session, SQLModel, create_engine, select
 
 from .models import Entry, Image, ImageType
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -125,6 +128,7 @@ class StorageManager:
             session.add(entry)
             session.commit()
             session.refresh(entry)
+            logger.debug("Created entry %s", entry.id)
 
             if local_image_path:
                 self._add_local_attachment(

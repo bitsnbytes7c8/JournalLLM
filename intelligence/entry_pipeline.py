@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import logging
 from uuid import UUID
 
 from intelligence.interfaces import EmbeddingClient, ImageLLMClient, TextLLMClient
 from storage import ImageType, StorageManager, VectorManager
+
+logger = logging.getLogger(__name__)
 
 
 def enrich_and_index_entry(
@@ -58,8 +61,10 @@ def enrich_and_index_entry(
                 content=entry.content,
                 image_description=img_ctx,
             )
+        logger.debug("Mood calculated for %s: %s", entry_id, mood)
 
         vector = embed_client.embed(combined)
+        logger.debug("Embedding calculated for %s: %s", entry_id, vector)
         vm.upsert_entry(
             str(entry_id),
             vector,
@@ -69,10 +74,14 @@ def enrich_and_index_entry(
             },
             document_text=combined,
         )
+        logger.debug("Vector DB updated for %s", entry_id)
         sm.update_entry_metadata(
             entry_id,
             mood=mood,
             vector_status=vector_status_success,
+        )
+        logger.debug(
+            "SQLite vector_status updated for %s: %s", entry_id, vector_status_success
         )
     except Exception:
         sm.update_entry_metadata(entry_id, vector_status="failed")

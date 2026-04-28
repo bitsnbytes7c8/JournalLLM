@@ -1,3 +1,9 @@
 .venv/
 __pycache__/
 *.pyc
+
+# Local journal storage (if created under repo for testing/dev)
+.local_journal/
+attachments/
+vector_store/
+journal.db

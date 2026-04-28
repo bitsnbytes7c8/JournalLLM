@@ -8,10 +8,13 @@ from uuid import UUID
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
 
+from journal_logging import configure_logging
 from intelligence.insights_engine import InsightsEngine
 from intelligence.tasks import process_entry_metadata
 from server.schemas import ChatRequest, ChatResponse, EntryCreate, EntryDetail, EntrySummary
 from storage import ImageType, InMemorySessionManager, StorageManager, VectorManager
+
+configure_logging()
 
 
 storage = StorageManager()

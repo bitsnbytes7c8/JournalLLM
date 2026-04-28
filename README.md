@@ -26,6 +26,7 @@ On startup the app ensures:
   If Ollama is missing or a model errors, background jobs set `vector_status` to `failed` on that entry.
 
 - **Environment**: `OLLAMA_HOST` is optional (e.g. `http://127.0.0.1:11434`) — passed through to the Ollama client when set.
+- **Logging**: set `JOURNAL_DEBUG=1` to enable debug logs (otherwise logs default to info).
 
 ### Run
 
@@ -38,6 +39,12 @@ python3 main.py
 
 - **Interactive API docs**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 - **Home UI**: [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
+
+Debug logs:
+
+```bash
+JOURNAL_DEBUG=1 python3 main.py
+```
 
 Alternative:
 
