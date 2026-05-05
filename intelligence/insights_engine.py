@@ -82,7 +82,7 @@ class InsightsEngine:
         vm: VectorManager,
         *,
         n_results: int = 20,
-        max_distance: float = 0.5,
+        max_distance: float = 1.0,
     ) -> Dict[str, str]:
         """Full RAG: intent -> retrieve by embedding -> final answer."""
         intent = self.get_search_intent(current_question, history)
