@@ -43,5 +43,6 @@ class ChatRequest(BaseModel):
 
 
 class ChatResponse(BaseModel):
-    reply: str
+    standalone_query: str
+    answer: str
 

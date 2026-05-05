@@ -27,6 +27,7 @@ On startup the app ensures:
 
 - **Environment**: `OLLAMA_HOST` is optional (e.g. `http://127.0.0.1:11434`) — passed through to the Ollama client when set.
 - **Logging**: set `JOURNAL_DEBUG=1` to enable debug logs (otherwise logs default to info).
+  - When enabled, Chroma semantic search logs both **raw** (pre-filter) and **filtered** results (IDs + distances).
 
 ### Run
 
@@ -39,6 +40,7 @@ python3 main.py
 
 - **Interactive API docs**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 - **Home UI**: [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
+- **Insights UI**: [http://127.0.0.1:8000/chat](http://127.0.0.1:8000/chat)
 
 Debug logs:
 
@@ -90,7 +92,7 @@ Body (`EntryCreate`):
 **POST `/chat/{session_id}`**
 
 - **Body:** `{ "message": "<user text>" }` — `ChatRequest`.
-- **Response:** `{ "reply": "<assistant text>" }` — `ChatResponse`.
+- **Response:** `{ "standalone_query": "...", "answer": "..." }` — `ChatResponse`.
 - Uses an in-memory **`InMemorySessionManager`**: before answering, only **prior** turns are in history; the new user message and the assistant reply are appended after `InsightsEngine` returns.
 - **`InsightsEngine`** (Llama 3.2 + **nomic-embed-text** + Chroma):
   1. **Intent JSON:** `get_search_intent` → `{"standalone_query", "filters": null}`.
@@ -124,5 +126,5 @@ This **deletes** the Chroma **`journal_entries`** collection, then walks **all S
 - `intelligence/tasks.py` — `process_entry_metadata` (wraps the pipeline for FastAPI `BackgroundTasks`)
 - `scripts/rebuild_index.py` — wipe Chroma collection and batch re-index from SQLite
 - `ui/router.py` — Jinja2 UI routes (`/`, `/create`, `/entry/{id}`)
-- `ui/templates/` — Jinja2 templates (`base.html`, `index.html`, `view.html`, `create.html`)
+- `ui/templates/` — Jinja2 templates (`base.html`, `index.html`, `view.html`, `create.html`, `chat.html`)
 - `ui/static/` — static assets (mounted at `/static`)

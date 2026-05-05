@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from datetime import date as date_type
 from pathlib import Path
-from uuid import UUID
+from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
@@ -43,6 +43,18 @@ def home(request: Request, sm: StorageManager = Depends(get_storage)):
 @ui_router.get("/create", response_class=HTMLResponse)
 def create(request: Request):
     return templates.TemplateResponse("create.html", {"request": request})
+
+
+@ui_router.get("/chat", response_class=HTMLResponse)
+def chat_page(
+    request: Request,
+    session_id: str = Query(default=""),
+):
+    sid = session_id or str(uuid4())
+    return templates.TemplateResponse(
+        "chat.html",
+        {"request": request, "session_id": sid},
+    )
 
 
 @ui_router.get("/entry/{entry_id}", response_class=HTMLResponse)

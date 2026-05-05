@@ -198,13 +198,16 @@ def chat(
     eng: InsightsEngine = Depends(get_insights),
 ):
     past = se.get_history(session_id)
-    reply = eng.answer(
+    result = eng.answer(
         current_question=payload.message,
         history=past,
         sm=sm,
         vm=vm,
     )
     se.add_message(session_id, "user", payload.message)
-    se.add_message(session_id, "assistant", reply)
-    return ChatResponse(reply=reply)
+    se.add_message(session_id, "assistant", result["answer"])
+    return ChatResponse(
+        standalone_query=result["standalone_query"],
+        answer=result["answer"],
+    )
 

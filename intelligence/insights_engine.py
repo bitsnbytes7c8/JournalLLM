@@ -83,8 +83,8 @@ class InsightsEngine:
         *,
         n_results: int = 20,
         max_distance: float = 0.5,
-    ) -> str:
-        """Full RAG: retrieve by embedding, then generate with the fixed section template."""
+    ) -> Dict[str, str]:
+        """Full RAG: intent -> retrieve by embedding -> final answer."""
         intent = self.get_search_intent(current_question, history)
         standalone = str(intent.get("standalone_query") or current_question).strip()
         vec = self._embedder.embed(standalone)
@@ -125,4 +125,5 @@ Answer helpfully using CONTEXT when it is relevant; if CONTEXT is empty or not u
             model=self._chat_model,
             messages=[{"role": "user", "content": prompt}],
         )
-        return _extract_message_text(resp).strip()
+        answer = _extract_message_text(resp).strip()
+        return {"standalone_query": standalone, "answer": answer}

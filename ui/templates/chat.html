@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Insights — Local Journal{% endblock %}
+
+{% block content %}
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h1 class="text-2xl font-semibold">Insights</h1>
+      <div class="text-xs text-slate-500 mt-1">Session: <span class="font-mono">{{ session_id }}</span></div>
+    </div>
+    <a href="/chat?session_id={{ session_id }}" class="text-sm text-slate-300 hover:text-white">
+      Share link
+    </a>
+  </div>
+
+  <div class="rounded-lg border border-slate-800 bg-slate-900/30">
+    <div id="messages" class="h-[60vh] overflow-y-auto p-4 space-y-3"></div>
+    <div class="border-t border-slate-800 p-3">
+      <form id="chatForm" class="flex gap-3 items-end">
+        <textarea
+          id="chatInput"
+          rows="2"
+          class="flex-1 resize-none rounded-md border border-slate-800 bg-slate-950 px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-400"
+          placeholder="Ask about your journal..."
+          required
+        ></textarea>
+        <button
+          id="sendBtn"
+          type="submit"
+          class="rounded-md bg-slate-100 text-slate-900 px-4 py-2 text-sm font-medium hover:bg-white disabled:opacity-50"
+        >
+          Send
+        </button>
+      </form>
+      <div id="status" class="mt-2 text-xs text-slate-400"></div>
+    </div>
+  </div>
+
+  <script>
+    const SESSION_ID = {{ session_id|tojson }};
+    const messagesEl = document.getElementById('messages');
+    const form = document.getElementById('chatForm');
+    const input = document.getElementById('chatInput');
+    const statusEl = document.getElementById('status');
+    const sendBtn = document.getElementById('sendBtn');
+
+    function scrollToBottom() {
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function bubble({ side, tone, text, italic = false }) {
+      const wrap = document.createElement('div');
+      wrap.className = side === 'right' ? 'flex justify-end' : 'flex justify-start';
+      const b = document.createElement('div');
+      const base = 'max-w-[85%] rounded-2xl px-4 py-2 text-sm leading-relaxed whitespace-pre-wrap break-words';
+      const bg = tone === 'user' ? 'bg-slate-800 text-slate-100' :
+                 tone === 'assistant' ? 'bg-zinc-900 text-slate-100' :
+                 'bg-slate-900/60 text-slate-300 border border-slate-800';
+      b.className = base + ' ' + bg + (italic ? ' italic' : '');
+      b.textContent = text;
+      wrap.appendChild(b);
+      messagesEl.appendChild(wrap);
+      scrollToBottom();
+      return b;
+    }
+
+    function setStatus(t) {
+      statusEl.textContent = t || '';
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = input.value.trim();
+      if (!msg) return;
+
+      bubble({ side: 'right', tone: 'user', text: msg });
+      input.value = '';
+      setStatus('Thinking...');
+      sendBtn.disabled = true;
+
+      try {
+        const resp = await fetch(`/chat/${encodeURIComponent(SESSION_ID)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: msg })
+        });
+        if (!resp.ok) {
+          const t = await resp.text();
+          bubble({ side: 'left', tone: 'assistant', text: `Error: ${t}` });
+          setStatus('');
+          sendBtn.disabled = false;
+          return;
+        }
+        const data = await resp.json();
+
+        // Show the standalone query first.
+        bubble({
+          side: 'left',
+          tone: 'thought',
+          italic: true,
+          text: `Searching for: ${data.standalone_query}`
+        });
+
+        // Then show the final answer.
+        bubble({ side: 'left', tone: 'assistant', text: data.answer });
+        setStatus('');
+      } catch (err) {
+        bubble({ side: 'left', tone: 'assistant', text: `Error: ${String(err)}` });
+        setStatus('');
+      } finally {
+        sendBtn.disabled = false;
+        input.focus();
+      }
+    });
+  </script>
+{% endblock %}
+

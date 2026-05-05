@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import chromadb
+
+logger = logging.getLogger(__name__)
 
 
 class VectorManager:
@@ -25,7 +28,7 @@ class VectorManager:
         self._client = chromadb.PersistentClient(path=str(self._path))
         self._collection = self._client.get_or_create_collection(
             name=self.COLLECTION_NAME,
-            metadata={"description": "Journal entry embeddings"},
+            metadata={"description": "Journal entry embeddings", "hnsw:space": "cosine"},
         )
 
     def wipe_journal_collection(self) -> None:
@@ -89,10 +92,17 @@ class VectorManager:
         row_ids = ids_nested[0] if ids_nested else []
         row_dists = dist_nested[0] if dist_nested else []
 
+        raw = []
+        for i, eid in enumerate(row_ids):
+            dist = row_dists[i] if i < len(row_dists) else None
+            raw.append({"id": eid, "distance": dist})
+        logger.debug("Chroma raw results (pre-filter): %s", raw)
+
         out: List[Dict[str, Any]] = []
         for i, eid in enumerate(row_ids):
             dist = row_dists[i] if i < len(row_dists) else None
             if max_distance is not None and dist is not None and dist > max_distance:
                 continue
             out.append({"id": eid, "distance": dist})
+        logger.debug("Chroma query_semantic results: %s", out)
         return out
