@@ -68,6 +68,14 @@
       statusEl.textContent = t || '';
     }
 
+    input.addEventListener('keydown', (e) => {
+      // Enter sends, Shift+Enter inserts newline.
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        form.requestSubmit();
+      }
+    });
+
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const msg = input.value.trim();
